@@ -100,7 +100,9 @@ Beberapa tahapan data preparation yang dilakukan dalam proyek ini:
 
 9. **Mapping data** : untuk memetakan data
 
-10. **Membagi data menjadi data training dan validasi** : Split 80% training, 20% validasi untuk Collaborative Filtering
+10. **Shuffling data sebelum pemisahan** : Melakukan pengacakan data menggunakan **df.sample(frac=1, random_state=42)** sebelum membagi dataset untuk model Collaborative Filtering. Proses shuffling ini penting untuk memastikan distribusi data yang acak dan menghindari bias dalam pembagian data training dan validasi.
+
+11. **Membagi data menjadi data training dan validasi** : Split 80% training, 20% validasi untuk Collaborative Filtering
 
 Tahapan data preparation ini diperlukan untuk memastikan kualitas data yang akan digunakan untuk training model dan mengoptimalkan performa sistem rekomendasi.
 
@@ -192,30 +194,41 @@ Berdasarkan hasil training model yang telah dilakukan:
 
 **Performa Model (Epoch 20/20):**
 
-- **Training RMSE**: 0.1782
-- **Validation RMSE**: 0.1992
-- **Training Loss**: 0.5877
-- **Validation Loss**: 0.6080
+- **Training RMSE**: 0.1794
+- **Validation RMSE**: 0.1998
+- **Training Loss**: 0.5887
+- **Validation Loss**: 0.6087
 
 **Analisis Hasil:**
 
-1. **Excellent Performance**: Model mencapai RMSE validation 0.1992, yang berarti rata-rata kesalahan prediksi rating hanya sekitar 0.2 poin dalam skala 0.5-5.0
+1. **Excellent Performance**: Model mencapai RMSE validation 0.1998, yang berarti rata-rata kesalahan prediksi rating hanya sekitar 0.2 poin dalam skala 0.5-5.0
 
 2. **Good Generalization**: Gap antara training dan validation RMSE relatif kecil (0.021), menunjukkan model tidak mengalami overfitting yang signifikan
 
 3. **Stable Convergence**: Model menunjukkan konvergensi yang stabil selama 20 epochs dengan performa yang konsisten
 
-4. **Robust Training**: Dengan 10,084 batches per epoch dan waktu training 83 detik, model menunjukkan efisiensi yang baik
+4. **Robust Training**: Dengan 10,084 batches per epoch dan waktu training 143 detik, model menunjukkan efisiensi yang baik
 
-**Interpretasi Performa:**
+#### Content-Based Filtering
 
-- RMSE validation 0.1992 menunjukkan akurasi prediksi rating yang sangat tinggi
-- Kesalahan prediksi kurang dari 4% dari rentang rating (0.2/5.0), yang merupakan hasil excellent untuk sistem rekomendasi
-- Model dapat diandalkan untuk memberikan rekomendasi yang akurat dalam implementasi real-world
+**Hasil Evaluasi Precision@K:**
+
+- **Precision@5**: 1.0000 (100.00%)
+- **Film yang ditest**: 4 dari 5 film sample (John Wick, Toy Story, Forrest Gump, The Matrix, Titanic)
+
+**Interpretasi Hasil:**
+
+Model Content-Based Filtering mencapai **Precision@5 sebesar 100%**, yang termasuk kategori "Excellent" karena semua rekomendasi yang diberikan relevan dengan preferensi berdasarkan kesamaan genre. Hal ini menunjukkan bahwa sistem mampu memberikan rekomendasi yang sangat akurat berdasarkan karakteristik film yang disukai pengguna.
+
+**Analisis Performa Keseluruhan:**
+
+- **Collaborative Filtering**: RMSE validation 0.1998 menunjukkan akurasi prediksi rating yang sangat tinggi dengan kesalahan kurang dari 4% dari rentang rating
+- **Content-Based Filtering**: Precision@5 100% menunjukkan relevansi rekomendasi yang sempurna berdasarkan kesamaan genre
+- Kedua model menunjukkan performa yang excellent dan dapat diandalkan untuk implementasi sistem rekomendasi dalam lingkungan produksi
 
 ## Kesimpulan
 
-Sistem rekomendasi film yang dikembangkan berhasil mencapai performa yang sangat baik dengan menggunakan dua pendekatan yang saling melengkapi. Content-Based Filtering memberikan rekomendasi yang dapat dijelaskan berdasarkan genre film dan efektif mengatasi cold start problem, sementara Collaborative Filtering dengan neural network mencapai RMSE validation 0.1992 yang menunjukkan akurasi prediksi sangat tinggi dengan kesalahan rata-rata hanya 0.2 poin dalam skala rating 5.0.
+Sistem rekomendasi film yang dikembangkan berhasil mencapai performa yang sangat baik dengan menggunakan dua pendekatan yang saling melengkapi. Content-Based Filtering memberikan rekomendasi yang dapat dijelaskan berdasarkan genre film dengan Precision@5 mencapai 100%, menunjukkan relevansi yang sempurna dan efektif mengatasi cold start problem. Sementara itu, Collaborative Filtering dengan neural network mencapai RMSE validation 0.1998 yang menunjukkan akurasi prediksi sangat tinggi dengan kesalahan rata-rata hanya 0.2 poin dalam skala rating 5.0.
 
 Model collaborative filtering menunjukkan generalisasi yang baik tanpa overfitting signifikan, mampu menangkap pola preferensi kompleks dari komunitas pengguna, dan dapat diandalkan untuk implementasi pada platform streaming nyata. Kombinasi kedua pendekatan ini memberikan solusi komprehensif untuk meningkatkan user experience, discovery film baru, dan mengurangi information overload yang dialami pengguna dalam memilih film yang sesuai dengan preferensi mereka.
 

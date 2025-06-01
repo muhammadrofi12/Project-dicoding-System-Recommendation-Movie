@@ -37,19 +37,55 @@ print('Jumlah data ratings dari user : ', len(ratings.userId.unique()))
 print('Jumlah data ratings dari user : ', len(ratings.movieId.unique()))
 print('Jumlah data : ', len(tags.movieId.unique()))
 
-"""## Univariate Exploratory Data Analysis"""
+"""## Univariate Exploratory Data Analysis
 
-links.info()
+Tahap penting untuk memahami kondisi awal data sebelum preprocessing.
+Kita akan mengecek missing values, struktur data, dan kualitas data
+pada setiap dataset untuk menentukan strategi pembersihan data.
+"""
 
-movies.info()
+print("1. INFORMASI DATASET LINKS:")
+print("Dataset links berisi ID eksternal untuk setiap film (IMDb, TMDb)")
+print(links.info())
 
-ratings.info()
+print("Missing values dalam dataset links:")
+print(links.isnull().sum())
 
-ratings.head()
+print("2. INFORMASI DATASET MOVIES:")
+print("Dataset movies berisi judul film dan genre")
+print(movies.info())
 
-ratings.describe()
+print("Missing values dalam dataset movies:")
+print(movies.isnull().sum())
 
-"""## Data Preprocessing"""
+print("3. INFORMASI DATASET RATINGS:")
+print("Dataset ratings berisi penilaian user terhadap film (1-5 skala)")
+print(ratings.info())
+
+print("Missing values dalam dataset ratings:")
+print(ratings.isnull().sum())
+
+print("Statistik deskriptif rating:")
+print(ratings.describe())
+
+print("4. INFORMASI DATASET TAGS:")
+print("Dataset tags berisi kata kunci yang diberikan user untuk film")
+print(tags.info())
+
+print("Missing values dalam dataset tags:")
+print(tags.isnull().sum())
+
+"""Berdasarkan analisis di atas, ditemukan:
+1. Dataset 'links' memiliki missing values pada kolom 'tmdbId' - perlu penanganan khusus
+2. Dataset 'movies', 'ratings', dan 'tags' tidak memiliki missing values
+4. Rating berdistribusi normal dengan rata-rata 3.5 dari skala 1-5
+
+Terdapat missing values pada dataset links, tapi tidak akan mempengaruhi model karena kita tidak menggunakan tmdbId dalam sistem rekomendasi.
+
+## Data Preprocessing
+
+Pada tahap ini, kita akan menggabungkan dan membersihkan data dari berbagai  dataset untuk mempersiapkan data yang siap digunakan dalam modeling. Proses ini meliputi penggabungan dataset, penanganan missing values, dan standardisasi format data.
+"""
 
 import numpy as np
 
@@ -99,27 +135,33 @@ all_movie_name
 all_movie = pd.merge(all_movie_name, tags[['movieId','tag']], on='movieId', how='left')
 all_movie
 
-"""## Data Preparation"""
+"""## Data Preparation
+
+Tahap persiapan data ini fokus pada pembersihan data final, penanganan
+missing values, dan pembuatan struktur data yang optimal untuk kedua
+model rekomendasi (Content-Based dan Collaborative Filtering).
+"""
 
 # Mengatasi missing value
 all_movie.isnull().sum()
 
+# Menghapus rows dengan missing values untuk memastikan kualitas data
 all_movie_clean = all_movie.dropna()
-all_movie_clean
 
-all_movie_clean.isnull().sum()
+print("Jumlah data setelah pembersihan:", len(all_movie_clean))
 
+# Verifikasi kembali agar tidak ada missing values tersisa
+print(all_movie_clean.isnull().sum())
+
+# Mengurutkan data berdasarkan movieId
 fix_movie = all_movie_clean.sort_values('movieId', ascending=True)
-fix_movie
 
-print('Jumlah seluruh data fix movie berdasarkan movieID: ', len(fix_movie.movieId.unique()))
+print('Jumlah film unik setelah pembersihan:', len(fix_movie.movieId.unique()))
 
-preparation = fix_movie
-preparation.sort_values('movieId')
+# Menghapus duplikat untuk Content-Based Filtering
+preparation = fix_movie.drop_duplicates('movieId')
 
-# Membuang data duplikat pada variabel preparation
-preparation = preparation.drop_duplicates('movieId')
-preparation
+print("Jumlah film unik untuk Content-Based:", len(preparation))
 
 # Mengonversi data series ‘movieId’ menjadi dalam bentuk list
 movie_id = preparation['movieId'].tolist()
@@ -130,9 +172,9 @@ movie_name = preparation['title'].tolist()
 # Mengonversi data series ‘genres’ menjadi dalam bentuk list
 movie_genre = preparation['genres'].tolist()
 
-print(len(movie_id))
-print(len(movie_name))
-print(len(movie_genre))
+print(f"Jumlah film ID: {len(movie_id)}")
+print(f"Jumlah nama film: {len(movie_name)}")
+print(f"Jumlah genre film: {len(movie_genre)}")
 
 # Membuat dictionary untuk data ‘movie_id’, ‘movie_name’, dan ‘movie_genre’
 movie_data = pd.DataFrame({
@@ -144,8 +186,9 @@ movie_data
 
 """# Model Development dengan Content Based Filtering
 
-Model Development dengan Content Based Filtering
-menggukan fungsi TFIDFVectorizer()
+Bagian ini mengembangkan model Content-Based Filtering menggunakan TF-IDF Vectorizer dan Cosine Similarity. Model ini merekomendasikan film berdasarkan kemiripan genre dengan film yang disukai user.
+
+Content-Based Filtering merekomendasikan film berdasarkan kemiripan  karakteristik (genre) dengan film yang disukai user sebelumnya. Metode ini menggunakan TF-IDF untuk menganalisis genre dan Cosine Similarity untuk menghitung kemiripan antar film.
 """
 
 # TF-IDF Vectorizer
@@ -230,6 +273,88 @@ Kemudian kita coba untuk mendapatkan rekomendasi movie yang mirip dengan John Wi
 # Mendapatkan rekomendasi film (movie) yang mirip dengan John Wick (2014)
 movie_recommendations('John Wick (2014)')
 
+"""## Evaluation
+
+Evaluasi kuantitatif untuk Content-Based Filtering menggunakan Precision@K dan evaluasi kualitas rekomendasi berdasarkan relevansi genre. Evaluasi ini penting untuk mengukur performa model.
+"""
+
+def evaluate_content_based_precision(test_movies, k=5, similarity_threshold=0.1):
+    """
+    Menghitung Precision@K untuk Content-Based Filtering
+
+    Parameters:
+    - test_movies: List film untuk ditest
+    - k: Jumlah rekomendasi (K)
+    - similarity_threshold: Threshold minimum untuk dianggap relevan
+
+    Returns:
+    - Average Precision@K
+    """
+    precisions = []
+
+    for movie in test_movies:
+        if movie in cosine_sim_df.index:
+            # Dapatkan rekomendasi
+            recommendations = movie_recommendations(movie, k=k)
+
+            if len(recommendations) > 0:
+                # Hitung relevansi berdasarkan genre similarity
+                original_genre = movie_data[movie_data.movie_name == movie]['genre'].iloc[0]
+                original_genres = set(original_genre.lower().split('|'))
+
+                relevant_count = 0
+                for _, rec_movie in recommendations.iterrows():
+                    rec_genres = set(rec_movie['genre'].lower().split('|'))
+                    # Hitung intersection genre
+                    common_genres = len(original_genres.intersection(rec_genres))
+                    total_genres = len(original_genres.union(rec_genres))
+
+                    # Relevan jika ada overlap genre yang signifikan
+                    if common_genres / total_genres >= similarity_threshold:
+                        relevant_count += 1
+
+                precision = relevant_count / k
+                precisions.append(precision)
+
+    return np.mean(precisions) if precisions else 0
+
+# Test dengan sample film dari berbagai genre
+print("\n=== EVALUASI PRECISION@K ===")
+print("Menguji Precision@5 dengan sample film dari berbagai genre...")
+
+test_movies_sample = [
+    'John Wick (2014)',
+    'Toy Story (1995)',
+    'Forrest Gump (1994)',
+    'The Matrix (1999)',
+    'Titanic (1997)'
+]
+
+# Filter film yang ada dalam dataset
+available_test_movies = [movie for movie in test_movies_sample if movie in movie_data.movie_name.values]
+print(f"Film test yang tersedia: {len(available_test_movies)} dari {len(test_movies_sample)}")
+
+if available_test_movies:
+    precision_at_5 = evaluate_content_based_precision(available_test_movies, k=5, similarity_threshold=0.2)
+
+    print(f"\n=== HASIL EVALUASI CONTENT-BASED FILTERING ===")
+    print(f"Precision@5: {precision_at_5:.4f}")
+    print(f"Persentase: {precision_at_5*100:.2f}%")
+
+    print(f"\nInterpretasi:")
+    if precision_at_5 >= 0.8:
+        print("Excellent: Model memberikan rekomendasi yang sangat relevan")
+    elif precision_at_5 >= 0.6:
+        print("Good: Model memberikan rekomendasi yang cukup relevan")
+    elif precision_at_5 >= 0.4:
+        print("Fair: Model memberikan rekomendasi dengan relevansi sedang")
+    else:
+        print("Poor: Model perlu improvement untuk meningkatkan relevansi")
+
+    print(f"\nMetrik Precision@K mengukur proporsi rekomendasi yang relevan")
+    print(f"dari total K rekomendasi yang diberikan. Nilai 1.0 berarti semua")
+    print(f"rekomendasi relevan, sedangkan 0.0 berarti tidak ada yang relevan.")
+
 """# Model Development dengan Collaborative Filtering
 
 ## Data Understanding
@@ -298,7 +423,7 @@ print('Number of User: {}, Number of movie: {}, Min Rating: {}, Max Rating: {}'.
 
 """## Membagi Data untuk Training dan Validasi"""
 
-# Mengacak dataset
+# Mengacak data untuk menghindari bias
 df = df.sample(frac=1, random_state=42)
 df
 
@@ -319,7 +444,10 @@ x_train, x_val, y_train, y_val = (
 
 print(x, y)
 
-"""## Proses Training"""
+"""## Proses Training
+
+Membuat model Neural Network untuk Collaborative Filtering. Menggunakan embedding layers untuk user dan movie, serta bias terms untuk memprediksi rating yang akan diberikan user pada suatu film.
+"""
 
 class RecommenderNet(tf.keras.Model):
 
@@ -374,7 +502,12 @@ history = model.fit(
     validation_data = (x_val, y_val)
 )
 
-"""## Visualisasi Metrik"""
+"""## Visualisasi Metrik
+
+Visualisasi metrik training untuk menganalisis performa model
+selama proses training. Grafik menunjukkan tren RMSE pada
+training dan validation set.
+"""
 
 plt.plot(history.history['root_mean_squared_error'])
 plt.plot(history.history['val_root_mean_squared_error'])
@@ -386,51 +519,75 @@ plt.show()
 
 """## Mendapatkan rekomendasi film (movie)"""
 
+# Menyalin data movie_data ke dalam variabel movie_df
 movie_df = movie_data
+
+# Membaca file ratings.csv yang berisi data rating pengguna terhadap film
 df = pd.read_csv('/content/drive/MyDrive/Colab Notebooks/sistem_rekomendasi/ml-latest-small/ratings.csv')
 
+# Mengambil secara acak satu userId dari data rating
 user_id = df.userId.sample(1).iloc[0]
+
+# Mengambil semua film yang telah ditonton oleh user tersebut
 movie_watched_by_user = df[df.userId == user_id]
 
-
+# Menentukan daftar ID film yang belum ditonton oleh user tersebut
 movie_not_watched = movie_df[~movie_df['id'].isin(movie_watched_by_user.movieId.values)]['id']
+
+# Menyaring hanya film yang ada dalam dictionary movie_to_movie_encoded
 movie_not_watched = list(
     set(movie_not_watched)
     .intersection(set(movie_to_movie_encoded.keys()))
 )
 
+# Mengubah ID film yang belum ditonton ke bentuk encoded (numerik)
 movie_not_watched = [[movie_to_movie_encoded.get(x)] for x in movie_not_watched]
+
+# Mengubah user ID menjadi bentuk encoded (numerik)
 user_encoder = user_to_user_encoded.get(user_id)
+
+# Membuat array gabungan berisi pasangan (user_encoded, movie_encoded)
 user_movie_array = np.hstack(
     ([[user_encoder]] * len(movie_not_watched), movie_not_watched)
 )
 
+# Memprediksi rating yang mungkin diberikan user terhadap film yang belum ditonton
 ratings = model.predict(user_movie_array).flatten()
 
+# Mengambil indeks dari 10 prediksi rating tertinggi
 top_ratings_indices = ratings.argsort()[-10:][::-1]
+
+# Mengubah indeks encoded film ke ID film asli berdasarkan prediksi terbaik
 recommended_movie_ids = [
     movie_encoded_to_movie.get(movie_not_watched[x][0]) for x in top_ratings_indices
 ]
 
+# Menampilkan rekomendasi untuk user tertentu
 print('Showing recommendations for users: {}'.format(user_id))
 print('===' * 9)
+
+# Menampilkan film dengan rating tertinggi yang sudah pernah ditonton user
 print('movie with high ratings from user')
 print('----' * 8)
 
+# Mengambil 5 film dengan rating tertinggi yang pernah ditonton user tersebut
 top_movie_user = (
     movie_watched_by_user.sort_values(
-        by = 'rating',
+        by='rating',
         ascending=False
     )
     .head(5)
     .movieId.values
 )
 
+# Menampilkan nama dan genre dari 5 film favorit user
 movie_df_rows = movie_df[movie_df['id'].isin(top_movie_user)]
 for row in movie_df_rows.itertuples():
     print(row.movie_name, ':', row.genre)
 
 print('----' * 8)
+
+# Menampilkan 10 rekomendasi film berdasarkan hasil prediksi model
 print('Top 10 movie recommendation')
 print('----' * 8)
 
