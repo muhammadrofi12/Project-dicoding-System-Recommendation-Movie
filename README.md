@@ -78,6 +78,17 @@ Dataset yang digunakan dalam proyek ini adalah MovieLens dataset yang berisi dat
 - Skala rating: 0.5 - 5.0 dengan increment 0.5
 - Periode data: Mencakup rating dari tahun 1995-2018
 
+**Kondisi Data dan Missing Values:**
+
+Berdasarkan analisis awal dataset, ditemukan kondisi data sebagai berikut:
+
+- **File Movies.csv**: Tidak ada missing values pada semua kolom (movieId, title, genres)
+- **File Ratings.csv**: Dataset rating lengkap tanpa missing values
+- **File Links.csv**: Terdapat **8 missing values** pada kolom `tmdbId`- perlu penanganan khusus
+- **File Tags.csv**: Tidak ada missing values yang signifikan
+
+Missing values pada kolom `tmdbId` di file `links.csv` tidak akan mempengaruhi sistem rekomendasi karena tidak digunakan sebagai fitur utama dalam pemodelan. Data yang digunakan untuk sistem rekomendasi (movieId, title, genres, dan ratings) dalam kondisi lengkap dan siap untuk diproses.
+
 ## Data Preparation
 
 Beberapa tahapan data preparation yang dilakukan dalam proyek ini:
@@ -94,7 +105,10 @@ Beberapa tahapan data preparation yang dilakukan dalam proyek ini:
 
 6. **Membuat dictionary** : Untuk membuat dictionary dari data yang ada. (Membuat DataFrame movie_data)
 
-7. **Menggunakan TfidfVectorizer** : untuk melakukan pembobotan. (Untuk Content-Based Filtering)
+7. **Feature Extraction dengan TfidfVectorizer** : untuk melakukan pembobotan dan ekstraksi fitur dari genre film. TF-IDF (Term Frequency-Inverse Document Frequency) digunakan untuk mengubah teks genre menjadi representasi numerik yang dapat dihitung similarity-nya. Teknik ini penting untuk Content-Based Filtering karena:
+   - **Term Frequency (TF)**: Menghitung frekuensi kemunculan genre tertentu dalam deskripsi film
+   - **Inverse Document Frequency (IDF)**: Memberikan bobot lebih tinggi pada genre yang jarang muncul
+   - **Vectorization**: Mengkonversi teks genre menjadi vektor numerik untuk perhitungan cosine similarity
 
 8. **Melakukan preprocessing** : untuk menghilangkan permasalahan-permasalahan yang dapat mengganggu hasil daripada proses data
 
@@ -117,7 +131,6 @@ Content Based Filtering menganalisis karakteristik film seperti genre, tahun ril
 
 **Implementasi:**
 
-- **Feature Extraction**: Menggunakan TF-IDF (Term Frequency-Inverse Document Frequency) untuk mengekstrak fitur dari genre film
 - **Similarity Calculation**: Menghitung cosine similarity antara film berdasarkan vektor TF-IDF
 - **Recommendation Generation**: Memberikan top-N film dengan similarity score tertinggi
 
@@ -170,7 +183,7 @@ Collaborative Filtering menggunakan neural network untuk mempelajari pola rating
 
 <p align='center'><img src ="./img/image-2.png"  width="300"></p>
 
-Sistem berhasil memberikan rekomendasi film untuk pengguna ke-368 berdasarkan riwayat rating tinggi yang diberikan sebelumnya. Film-film seperti Pulp Fiction dan Schindler's List mencerminkan preferensi pengguna, sementara rekomendasi seperti Paths of Glory dan Captain Fantastic disarankan karena memiliki genre atau tema serupa yang sesuai dengan minat pengguna.
+Sistem berhasil memberikan rekomendasi film untuk pengguna ke-586 berdasarkan riwayat rating tinggi yang diberikan sebelumnya. Film-film dengan rating tinggi seperti Braveheart, The Shawshank Redemption, dan The Matrix mencerminkan preferensi pengguna terhadap film berkualitas tinggi. Rekomendasi Top 10 yang diberikan sistem meliputi film-film seperti Wallace & Gromit, Dr. Strangelove, dan Paths of Glory yang diprediksi akan disukai pengguna berdasarkan pola rating komunitas dengan selera serupa.
 
 ## Evaluation
 
