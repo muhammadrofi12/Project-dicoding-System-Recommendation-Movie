@@ -91,32 +91,103 @@ Missing values pada kolom `tmdbId` di file `links.csv` tidak akan mempengaruhi s
 
 ## Data Preparation
 
-Beberapa tahapan data preparation yang dilakukan dalam proyek ini:
+Tahap data preparation dalam proyek ini dibagi menjadi dua bagian utama sesuai dengan pendekatan sistem rekomendasi yang digunakan: **Content-Based Filtering** dan **Collaborative Filtering**. Setiap pendekatan memerlukan teknik persiapan data yang berbeda untuk mengoptimalkan performa model.
 
-1. **Menggabungkan variabel** : untuk menggabungkan beberapa variabel berdasarkan id yang sifatnya unik (berbeda dari yang lain).
+## A. Data Preparation untuk Content-Based Filtering
 
-2. **Mengatasi missing value** : menyeleksi data apakah data tersebut ada yang kosong atau tidak, jika ada data kosong maka saya akan menghapusnya
+### 1. Menggabungkan Dataset
 
-3. **Mengurutan data** : untuk mengurutkan data berdasarkan movieId secara ascending.
+Menggabungkan beberapa dataset berdasarkan `movieId` yang bersifat unik untuk mendapatkan informasi lengkap tentang film.
 
-4. **Mengatasi duplikasi data** : untuk mengatasi data yang nilai atau isinya sama. (Menghapus duplikat berdasarkan movieId)
+### 2. Mengatasi Missing Value
 
-5. **Konversi data menjadi list** : untuk mengubah data menjadi list (movieId, title, dan genres)
+Menyeleksi dan menghapus data yang memiliki nilai kosong (missing values) untuk memastikan kualitas data yang akan digunakan dalam model. Missing values pada kolom `tmdbId` di dataset `links.csv` tidak mempengaruhi model karena tidak digunakan sebagai fitur utama.
 
-6. **Membuat dictionary** : Untuk membuat dictionary dari data yang ada. (Membuat DataFrame movie_data)
+### 3. Pengurutan Data
 
-7. **Feature Extraction dengan TfidfVectorizer** : untuk melakukan pembobotan dan ekstraksi fitur dari genre film. TF-IDF (Term Frequency-Inverse Document Frequency) digunakan untuk mengubah teks genre menjadi representasi numerik yang dapat dihitung similarity-nya. Teknik ini penting untuk Content-Based Filtering karena:
-   - **Term Frequency (TF)**: Menghitung frekuensi kemunculan genre tertentu dalam deskripsi film
-   - **Inverse Document Frequency (IDF)**: Memberikan bobot lebih tinggi pada genre yang jarang muncul
-   - **Vectorization**: Mengkonversi teks genre menjadi vektor numerik untuk perhitungan cosine similarity
+Mengurutkan data berdasarkan `movieId` secara ascending untuk memudahkan proses indexing dan akses data.
 
-8. **Melakukan preprocessing** : untuk menghilangkan permasalahan-permasalahan yang dapat mengganggu hasil daripada proses data
+### 4. Mengatasi Duplikasi Data
 
-9. **Mapping data** : untuk memetakan data
+Menghapus data duplikat berdasarkan `movieId` untuk memastikan setiap film hanya muncul satu kali dalam dataset. Hal ini penting untuk Content-Based Filtering karena setiap film harus memiliki representasi yang unik.
 
-10. **Shuffling data sebelum pemisahan** : Melakukan pengacakan data menggunakan **df.sample(frac=1, random_state=42)** sebelum membagi dataset untuk model Collaborative Filtering. Proses shuffling ini penting untuk memastikan distribusi data yang acak dan menghindari bias dalam pembagian data training dan validasi.
+### 5. Konversi Data Menjadi List
 
-11. **Membagi data menjadi data training dan validasi** : Split 80% training, 20% validasi untuk Collaborative Filtering
+Mengubah data series (`movieId`, `title`, dan `genres`) menjadi bentuk list untuk memudahkan manipulasi data dan pembuatan dictionary.
+
+### 6. Membuat Dictionary
+
+Membuat DataFrame `movie_data` yang berisi struktur data terorganisir dengan kolom:
+
+- `id`: ID unik film
+- `movie_name`: Judul film
+- `genre`: Genre film
+
+### 7. Feature Extraction dengan TfidfVectorizer
+
+Melakukan pembobotan dan ekstraksi fitur dari genre film menggunakan TF-IDF (Term Frequency-Inverse Document Frequency). Teknik ini penting untuk Content-Based Filtering karena:
+
+- **Term Frequency (TF)**: Menghitung frekuensi kemunculan genre tertentu dalam deskripsi film
+- **Inverse Document Frequency (IDF)**: Memberikan bobot lebih tinggi pada genre yang jarang muncul
+- **Vectorization**: Mengkonversi teks genre menjadi vektor numerik untuk perhitungan cosine similarity
+
+## B. Data Preparation untuk Collaborative Filtering
+
+### 1. Preprocessing Data Rating
+
+Menggunakan dataset `ratings.csv` sebagai data utama untuk model Collaborative Filtering yang berisi interaksi pengguna dengan film.
+
+### 2. Encoding userId dan movieId
+
+Melakukan proses encoding untuk mengubah `userId` dan `movieId` menjadi representasi numerik (integer encoding):
+
+**Encoding userId:**
+
+- Membuat mapping `user_to_user_encoded`: {userId_asli: indeks_numerik}
+- Membuat reverse mapping `user_encoded_to_user`: {indeks_numerik: userId_asli}
+
+**Encoding movieId:**
+
+- Membuat mapping `movie_to_movie_encoded`: {movieId_asli: indeks_numerik}
+- Membuat reverse mapping `movie_encoded_to_movie`: {indeks_numerik: movieId_asli}
+
+Proses encoding ini diperlukan karena model neural network membutuhkan input berupa indeks numerik yang berurutan untuk embedding layers.
+
+### 3. Mapping Data
+
+Memetakan `userId` dan `movieId` yang sudah di-encode ke dalam DataFrame untuk membuat representasi numerik yang konsisten.
+
+### 4. Normalisasi Nilai Rating (Min-Max Scaling)
+
+Melakukan normalisasi rating menggunakan teknik Min-Max Scaling dengan formula:
+
+```
+rating_normalized = (rating - min_rating) / (max_rating - min_rating)
+```
+
+Tujuan normalisasi ini adalah:
+
+- Mengubah skala rating dari rentang asli (0.5-5.0) menjadi rentang 0-1
+- Mempercepat konvergensi model neural network
+- Memastikan gradien yang stabil selama training
+- Menghindari bias terhadap nilai rating yang tinggi
+
+### 5. Shuffling Data Sebelum Pemisahan
+
+Melakukan pengacakan data menggunakan `df.sample(frac=1, random_state=42)` sebelum membagi dataset. Proses shuffling ini penting untuk:
+
+- Memastikan distribusi data yang acak dan representative
+- Menghindari bias dalam pembagian data training dan validasi
+- Mencegah overfitting akibat pola urutan data yang konsisten
+
+### 6. Pembagian Data Training dan Validasi
+
+Membagi dataset menjadi:
+
+- **80% data training**: Digunakan untuk melatih model
+- **20% data validasi**: Digunakan untuk evaluasi performa model
+
+Pembagian ini dilakukan setelah shuffling untuk memastikan kedua subset memiliki distribusi yang seimbang.
 
 Tahapan data preparation ini diperlukan untuk memastikan kualitas data yang akan digunakan untuk training model dan mengoptimalkan performa sistem rekomendasi.
 
